@@ -2,28 +2,27 @@
 # vi: set ft=ruby :
 
 machines = {
-    "load-balancer" => { :ip => "", :cpu => 1, :mem => 512},
-    "web-1" => { :ip => "", :cpu => 1, :mem => 512},
-    "web-2" => { :ip => "", :cpu => 1, :mem => 512},
-    "database" => { :ip => "", :cpu => 1, :mem => 512},
-    "mirror" => { :ip => "", :cpu => 1, :mem => 512}
+    "load-balancer" => { :ip => "192.168.130.222", :mem => 512},
+    "web-1" => { :ip => "192.168.130.223", :mem => 512},
+    "web-2" => { :ip => "192.168.130.224", :mem => 512},
+    "database" => { :ip => "192.168.130.225", :mem => 512},
+    "mirror" => { :ip => "192.168.130.226", :mem => 512}
 }
 
 Vagrant.configure("2") do |config|
     
     machines.each do |hostname, info|
-        config.vm.define hostname do |lb-conf|
-            lb-conf.vm.provider "virtualbox" do |vb|
+        config.vm.define hostname do |lbconf|
+            lbconf.vm.synced_folder "saltstack/salt", "/svr/salt"
+            lbconf.vm.synced_folder "saltstack/pillar", "/svr/pillar"
+            lbconf.vm.provider :virtualbox do |vb|
                 vb.memory = "#{info[:mem]}"
-                vb.cpu = "#{info[:cpu]}"
                 vb.name = hostname
             end
-            lb-conf.vm.box = "centos/7"
-            lb-conf.vm.provision = "salt"
-            lb-conf.synced_folder "saltstack/salt", "/svr/salt"
-            lb-conf.synced_folder "saltstack/pillar", "/svr/pillar"
+            lbconf.vm.box = "centos/7"
+            lbconf.vm.network "public_network", bridge: "eno1", ip: "#{info[:ip]}"
             
-            lb-conf.vm.provision "salt" do |salt|
+            lbconf.vm.provision "salt" do |salt|
                 salt.masterless = true
                 salt.run_highstate = true
                 salt.verbose = true        
